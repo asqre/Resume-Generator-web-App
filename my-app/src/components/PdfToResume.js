@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import pdfToText from "react-pdftotext";
+import toast from "react-hot-toast";
 
 const PdfToResumeProcessor = ({ file, apiKey }) => {
   const [resumeHtml, setResumeHtml] = useState("");
@@ -45,8 +46,14 @@ The HTML should be clean, professional, and ready to be displayed. Include appro
 
       return response.data.choices[0].message.content;
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
-      throw error;
+      if (error.response.data.error.code === "invalid_api_key") {
+        toast.error("Invalid API Key");
+      }
+      if (error.response.data.error.code === "insufficient_quota") {
+        toast.error("Insufficient Quota");
+      }
+
+      throw error.response.data.error.message;
     }
   };
 
@@ -58,8 +65,7 @@ The HTML should be clean, professional, and ready to be displayed. Include appro
       const htmlResume = await generateResume(pdfText);
       setResumeHtml(htmlResume);
     } catch (error) {
-      setError("Error processing PDF or generating resume. Please try again.");
-      console.error(error);
+      setError(error);
     } finally {
       setIsLoading(false);
     }
