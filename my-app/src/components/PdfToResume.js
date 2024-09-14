@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import pdfToText from "react-pdftotext";
 import toast from "react-hot-toast";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const PdfToResumeProcessor = ({ file, apiKey }) => {
   const [resumeHtml, setResumeHtml] = useState("");
@@ -28,23 +29,31 @@ ${pdfText}
 The HTML should be clean, professional, and ready to be displayed. Include appropriate semantic HTML5 tags and add classes for styling. The structure should include sections for personal information, summary, experience, education, and skills.`;
 
     try {
-      const response = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 2000,
-          temperature: 0.7,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // const response = await axios.post(
+      //   "https://api.openai.com/v1/chat/completions",
+      //   {
+      //     model: "gpt-3.5-turbo",
+      //     messages: [{ role: "user", content: prompt }],
+      //     max_tokens: 2000,
+      //     temperature: 0.7,
+      //   },
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${apiKey}`,
+      //       "Content-Type": "application/json",
+      //     },
+      //   }
+      // );
 
-      return response.data.choices[0].message.content;
+      // return response.data.choices[0].message.content;
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      return text;
     } catch (error) {
       if (error.response.data.error.code === "invalid_api_key") {
         toast.error("Invalid API Key");
@@ -53,7 +62,7 @@ The HTML should be clean, professional, and ready to be displayed. Include appro
         toast.error("Insufficient Quota");
       }
 
-      throw error.response.data.error.message;
+      throw error.response.data.error.message || "An error";
     }
   };
 
