@@ -21,7 +21,7 @@ const FileUpload = ({ onFileSelect }) => {
           id="file-upload"
           name="file-upload"
           type="file"
-          accept=".pdf"
+          accept="application/pdf"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           onChange={handleFileChange}
         />
