@@ -4,7 +4,7 @@ import pdfToText from "react-pdftotext";
 import toast from "react-hot-toast";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const PdfToResumeProcessor = ({ file, apiKey }) => {
+const PdfToResumeProcessor = ({ file, apiKey, apiProvider }) => {
   const [resumeHtml, setResumeHtml] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +21,7 @@ const PdfToResumeProcessor = ({ file, apiKey }) => {
     });
   };
 
-  const generateResume = async (pdfText) => {
+  const generateResumeOpenAI = async (pdfText) => {
     const prompt = `Convert the following LinkedIn profile information into a well-structured HTML resume:
 
 ${pdfText}
@@ -29,40 +29,53 @@ ${pdfText}
 The HTML should be clean, professional, and ready to be displayed. Include appropriate semantic HTML5 tags and add classes for styling. The structure should include sections for personal information, summary, experience, education, and skills.`;
 
     try {
-      // const response = await axios.post(
-      //   "https://api.openai.com/v1/chat/completions",
-      //   {
-      //     model: "gpt-3.5-turbo",
-      //     messages: [{ role: "user", content: prompt }],
-      //     max_tokens: 2000,
-      //     temperature: 0.7,
-      //   },
-      //   {
-      //     headers: {
-      //       Authorization: `Bearer ${apiKey}`,
-      //       "Content-Type": "application/json",
-      //     },
-      //   }
-      // );
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      // return response.data.choices[0].message.content;
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      if (error.response?.data?.error?.code === "invalid_api_key") {
+        throw new Error("Invalid OpenAI API Key");
+      } else if (error.response?.data?.error?.code === "insufficient_quota") {
+        throw new Error("Insufficient OpenAI API Quota");
+      } else {
+        throw new Error("An error occurred with OpenAI API");
+      }
+    }
+  };
 
+  const generateResumeGemini = async (pdfText) => {
+    const prompt = `Convert the following LinkedIn profile information into a well-structured HTML resume:
+
+${pdfText}
+
+The HTML should be clean, professional, and ready to be displayed. Include appropriate semantic HTML5 tags and add classes for styling. The structure should include sections for personal information, summary, experience, education, and skills.`;
+
+    try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
 
-      return text;
-    } catch (error) {
-      if (error.response.data.error.code === "invalid_api_key") {
-        toast.error("Invalid API Key");
-      }
-      if (error.response.data.error.code === "insufficient_quota") {
-        toast.error("Insufficient Quota");
-      }
+      const htmlContent = text.match(/```html\n([\s\S]*?)\n```/)[1];
 
-      throw error.response.data.error.message || "An error";
+      return htmlContent;
+    } catch (error) {
+      throw new Error("Invalid Gemini API Key");
     }
   };
 
@@ -71,31 +84,45 @@ The HTML should be clean, professional, and ready to be displayed. Include appro
     setError("");
     try {
       const pdfText = await extractTextFromPdf(file);
-      const htmlResume = await generateResume(pdfText);
+      let htmlResume;
+      if (apiProvider === "openai") {
+        htmlResume = await generateResumeOpenAI(pdfText);
+      } else if (apiProvider === "gemini") {
+        htmlResume = await generateResumeGemini(pdfText);
+      } else {
+        throw new Error("Invalid API provider selected");
+      }
       setResumeHtml(htmlResume);
     } catch (error) {
-      setError(error);
+      const errorMessage = error.message || "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="mt-8">
-      <button
-        onClick={handleProcessPdf}
-        disabled={isLoading || !file || !apiKey}
-        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
-      >
-        {isLoading ? "Processing..." : "Generate Resume"}
-      </button>
+    <div className="mt-8 w-full">
+      <div className="flex justify-center">
+        <button
+          onClick={handleProcessPdf}
+          disabled={isLoading || !file || !apiKey}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+        >
+          {isLoading ? "Processing..." : "Generate Resume"}
+        </button>
+      </div>
       {error && <p className="text-red-500 mt-2">{error}</p>}
       {resumeHtml && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">Generated Resume:</h2>
-          <div
-            dangerouslySetInnerHTML={{ __html: resumeHtml }}
-            className="border p-4 rounded"
+          <iframe
+            srcDoc={resumeHtml}
+            title="Generated Resume"
+            width="100%"
+            height="600px"
+            className="border rounded"
           />
         </div>
       )}

@@ -6,24 +6,51 @@ import PdfToResumeProcessor from "./PdfToResume";
 const ResumeGeneratorForm = () => {
   const [file, setFile] = useState(null);
   const [apiKey, setApiKey] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  };
+  const [apiProvider, setApiProvider] = useState("openai");
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <FileUpload onFileSelect={setFile} />
-      <ApiKeyInput onApiKeyChange={setApiKey} />
-      {/* <button
-        type="submit"
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-      >
-        Generate Resume
-      </button> */}
+    <div className="flex flex-col items-center">
+      <div className="max-w-md mx-auto mt-8">
+        <FileUpload onFileSelect={setFile} />
 
-      <PdfToResumeProcessor file={file} apiKey={apiKey} />
-    </form>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Select API Provider:
+          </label>
+          <div className="flex items-center space-x-4">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                className="form-radio"
+                name="apiProvider"
+                value="openai"
+                checked={apiProvider === "openai"}
+                onChange={(e) => setApiProvider(e.target.value)}
+              />
+              <span className="ml-2">OpenAI</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                className="form-radio"
+                name="apiProvider"
+                value="gemini"
+                checked={apiProvider === "gemini"}
+                onChange={(e) => setApiProvider(e.target.value)}
+              />
+              <span className="ml-2">Gemini</span>
+            </label>
+          </div>
+        </div>
+
+        <ApiKeyInput onApiKeyChange={setApiKey} provider={apiProvider} />
+      </div>
+      <PdfToResumeProcessor
+        file={file}
+        apiKey={apiKey}
+        apiProvider={apiProvider}
+      />
+    </div>
   );
 };
 
