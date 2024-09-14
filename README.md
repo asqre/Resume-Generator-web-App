@@ -2,6 +2,10 @@
 
 This project is a React-based web application that converts LinkedIn profile PDFs into well-structured HTML resumes using AI. It leverages either OpenAI's GPT-3.5 or Google's Gemini AI to process the PDF content and generate a professional-looking resume.
 
+## Live Demo
+
+Check out the live version of the application here: https://resumegenai-af278.web.app/
+
 ## Features
 
 - Upload LinkedIn profile PDFs
